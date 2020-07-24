@@ -7,6 +7,8 @@ const hpp = require('hpp');
 const cors = require('cors');
 
 const walletRouter = require('./routes/walletRouter')
+const filterRouter = require('./routes/filterRouter')
+
 const userRoutes = require('./routes/userRoutes');
 const globalErrHandler = require('./controllers/errorController');
 const AppError = require('./utils/appError');
@@ -44,6 +46,7 @@ app.use(hpp());
 // Routes
 // app.use('/api/v1/users', userRoutes);
 app.use('/api/wallet',walletRouter);
+app.use('/api/filter',filterRouter);
 
 // handle undefined Routes
 app.use('*', (req, res, next) => {
