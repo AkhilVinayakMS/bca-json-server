@@ -18,10 +18,18 @@ walletRouter.get("/latestbalance", async (req, res) => {
     const fullDataArray = actualData;
     const { skip, limit } = req.query;
     let paginatedData;
+    const {currency,startDate,endDate,walletId,fromBalance,toBalance} = req.query;
+    let currencyArray = !currency ?fullDataArray :fullDataArray.filter(data => data.Currency == currency);
+    let walletArray = !walletId ? currencyArray : currencyArray.filter(data=>data.Address == walletId)
+    let balanceFilterArray = (!fromBalance && !toBalance)? walletArray 
+                            : walletArray.filter(data =>
+                                 (Number(data.LatestBalance) >= fromBalance
+                                 && Number(data.LatestBalance)<=toBalance))
+    
     if (!skip && !limit) {
         paginatedData = fullDataArray;
     } else {
-        paginatedData = paginate(fullDataArray, Number(limit), Number(skip) + 1);
+        paginatedData = paginate(balanceFilterArray, Number(limit), Number(skip) + 1);
     }
     const result=[]
     paginatedData.map((data)=>{
@@ -40,10 +48,19 @@ walletRouter.get("/scatterbalance", async (req, res) => {
     // const {inviteId, action} = req.params;
     const { skip, limit } = req.query;
     let paginatedData;
+    const fullDataArray = actualData;
+    const {currency,startDate,endDate,walletId,fromBalance,toBalance} = req.query;
+    let currencyArray = !currency ?fullDataArray :fullDataArray.filter(data => data.Currency == currency);
+    let walletArray = !walletId ? currencyArray : currencyArray.filter(data=>data.Address == walletId)
+    let balanceFilterArray = (!fromBalance && !toBalance)? walletArray 
+                            : walletArray.filter(data =>
+                                 (Number(data.RunningBalance) >= fromBalance
+                                 && Number(data.RunningBalance)<=toBalance))
+
     if (!skip && !limit) {
-        paginatedData = actualData;
+        paginatedData = balanceFilterArray;
     } else {
-        paginatedData = paginate(actualData, Number(limit), Number(skip) + 1);
+        paginatedData = paginate(balanceFilterArray, Number(limit), Number(skip) + 1);
     }
     const result = [];
     paginatedData.map((data)=>{
