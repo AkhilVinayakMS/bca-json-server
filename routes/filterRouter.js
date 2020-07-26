@@ -1,6 +1,7 @@
 const express = require("express");
 const actualData = require("../data/page_one_actualdata")
 const _ = require('lodash')
+const moment = require('moment')
 
 const filterRouter = express.Router();
 filterRouter.get("/limits/all", async (req, res) => {
@@ -15,8 +16,11 @@ filterRouter.get("/limits/all", async (req, res) => {
       const currencyValues = Object.keys(distinctCurrencyArray)
       const minWalletRunningBalance =  _.min(actualData.map((rec) => rec.RunningBalance)) 
       const maxWalletRunningBalance =  _.max(actualData.map((rec) => rec.RunningBalance)) 
+      const minDate = _.min(actualData.map((rec) => moment(rec.BlockTime)) )
+      const maxDate = _.max(actualData.map((rec) => moment(rec.BlockTime)) )
+
     res.send({
-        currencyValues,minWalletRunningBalance,maxWalletRunningBalance,distinctWalletAddresses
+        currencyValues,minWalletRunningBalance,maxWalletRunningBalance,distinctWalletAddresses,minDate,maxDate
     });
 });
 module.exports = filterRouter;

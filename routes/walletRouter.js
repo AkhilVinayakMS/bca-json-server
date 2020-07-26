@@ -2,74 +2,118 @@ const express = require("express");
 const walletBalence = require("../data/walletBalence");
 const scatterData = require("../data/scatterPlot");
 const lineData = require("../data/lineData");
-const actualData = require("../data/page_one_actualdata")
+const actualData = require("../data/page_one_actualdata");
 const paginate = require("../utils/pagination");
-const csv = require('csvtojson')
+const csv = require("csvtojson");
+const moment = require("moment");
 
-const csvFilePath= '/Users/akhil.pillai1/dev/bca-fake-rest-server/Nodejs-rest-api-project-structure-Express/routes/bca_data_all.csv'
+const csvFilePath =
+    "/Users/akhil.pillai1/dev/bca-fake-rest-server/Nodejs-rest-api-project-structure-Express/routes/bca_data_all.csv";
 
 const walletRouter = express.Router();
-
-
+function filterFunction(query, fullDataArray, isLatestBalance) {
+    const {
+        currency,
+        startDate,
+        endDate,
+        walletId,
+        fromBalance,
+        toBalance
+    } = query;
+    let currencyArray = !currency
+        ? fullDataArray
+        : fullDataArray.filter(data => data.Currency == currency);
+    let walletArray = !walletId
+        ? currencyArray
+        : currencyArray.filter(data => data.Address == walletId);
+    let balanceFilterArray;
+    if(isLatestBalance){
+     balanceFilterArray =
+        !fromBalance && !toBalance
+            ? walletArray
+            : walletArray.filter(
+                data =>
+                    Number(data.LatestBalance) >= fromBalance &&
+                    Number(data.LatestBalance) <= toBalance
+            );
+    }else{
+        balanceFilterArray =
+        !fromBalance && !toBalance
+            ? walletArray
+            : walletArray.filter(
+                data =>
+                    Number(data.RunningBalance) >= fromBalance &&
+                    Number(data.RunningBalance) <= toBalance
+            );
+    }
+    let startDateFilterArray = !startDate
+        ? balanceFilterArray
+        : balanceFilterArray.filter(
+            data =>
+                moment(data.BlockTime, "DD-MM-YY hh:mm") >
+                moment(startDate, "DD-MM-YY")
+        );
+    let endDateFilterArray = !endDate
+        ? startDateFilterArray
+        : startDateFilterArray.filter(
+            data =>
+                moment(data.BlockTime, "DD-MM-YY hh:mm") < moment(endDate, "DD-MM-YY")
+        );
+        return endDateFilterArray
+}
 // Graph 1.1
 walletRouter.get("/latestbalance", async (req, res) => {
     // const {inviteId, action} = req.params;
     // const fullDataArray = await csv().fromFile(csvFilePath)
     const fullDataArray = actualData;
     const { skip, limit } = req.query;
-    let paginatedData;
-    const {currency,startDate,endDate,walletId,fromBalance,toBalance} = req.query;
-    let currencyArray = !currency ?fullDataArray :fullDataArray.filter(data => data.Currency == currency);
-    let walletArray = !walletId ? currencyArray : currencyArray.filter(data=>data.Address == walletId)
-    let balanceFilterArray = (!fromBalance && !toBalance)? walletArray 
-                            : walletArray.filter(data =>
-                                 (Number(data.LatestBalance) >= fromBalance
-                                 && Number(data.LatestBalance)<=toBalance))
-    
+    let endDateFilterArray = filterFunction(req.query,fullDataArray,true);
+
     if (!skip && !limit) {
-        paginatedData = fullDataArray;
+        paginatedData = endDateFilterArray;
     } else {
-        paginatedData = paginate(balanceFilterArray, Number(limit), Number(skip) + 1);
+        paginatedData = paginate(
+            endDateFilterArray,
+            Number(limit),
+            Number(skip) + 1
+        );
     }
-    const result=[]
-    paginatedData.map((data)=>{
+    const result = [];
+    paginatedData.map(data => {
         result.push({
-            address:data.Address,
-            balance:data.LatestBalance
-        })
-    })
+            address: data.Address,
+            balance: data.LatestBalance
+        });
+    });
 
     res.send({
         data: result
     });
 });
-// graph 1.2 
+// graph 1.2
 walletRouter.get("/scatterbalance", async (req, res) => {
     // const {inviteId, action} = req.params;
     const { skip, limit } = req.query;
     let paginatedData;
     const fullDataArray = actualData;
-    const {currency,startDate,endDate,walletId,fromBalance,toBalance} = req.query;
-    let currencyArray = !currency ?fullDataArray :fullDataArray.filter(data => data.Currency == currency);
-    let walletArray = !walletId ? currencyArray : currencyArray.filter(data=>data.Address == walletId)
-    let balanceFilterArray = (!fromBalance && !toBalance)? walletArray 
-                            : walletArray.filter(data =>
-                                 (Number(data.RunningBalance) >= fromBalance
-                                 && Number(data.RunningBalance)<=toBalance))
-
+    const endDateFilterArray = filterFunction(req.query, fullDataArray, false)
     if (!skip && !limit) {
-        paginatedData = balanceFilterArray;
+        paginatedData = endDateFilterArray;
     } else {
-        paginatedData = paginate(balanceFilterArray, Number(limit), Number(skip) + 1);
+        paginatedData = paginate(
+            endDateFilterArray,
+            Number(limit),
+            Number(skip) + 1
+        );
     }
     const result = [];
-    paginatedData.map((data)=>{
+    paginatedData.map(data => {
         result.push({
-            date:data.BlockTime.substring(0,8),
-            address:data.Address,
-            balance:data.LatestBalance
-        })
-    })
+            date: data.BlockTime.substring(0, 8),
+            address: data.Address,
+            balance: data.LatestBalance
+        });
+    });
 
     res.send({
         data: result
@@ -93,17 +137,17 @@ walletRouter.get("/linedata", async (req, res) => {
 });
 walletRouter.get("/runningbalance/walletId", async (req, res) => {
     // const {inviteId, action} = req.params;
-    const { skip, limit ,walletId} = req.query;
-    const specificBalance =[]
-    actualData.map(data=>{
-        if(data.Address == walletId ){
+    const { skip, limit, walletId } = req.query;
+    const specificBalance = [];
+    actualData.map(data => {
+        if (data.Address == walletId) {
             specificBalance.push({
-                date:data.BlockTime.substring(0,8),
-                address:data.Address,
-                balance:data.LatestBalance
-            })
+                date: data.BlockTime.substring(0, 8),
+                address: data.Address,
+                balance: data.LatestBalance
+            });
         }
-    })
+    });
     let paginatedData;
     if (!skip && !limit) {
         paginatedData = specificBalance;
@@ -115,7 +159,6 @@ walletRouter.get("/runningbalance/walletId", async (req, res) => {
         data: paginatedData
     });
 });
-
 
 walletRouter.get("/csv", async (req, res) => {
     const jsonArray = await csv().fromFile(csvFilePath);
